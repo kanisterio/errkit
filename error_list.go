@@ -10,8 +10,8 @@ import (
 
 type ErrorList []error
 
-var _ error = ErrorList{}
-var _ json.Marshaler = ErrorList{}
+var _ error = (ErrorList)(nil)
+var _ json.Marshaler = (ErrorList)(nil)
 
 func (e ErrorList) String() string {
 	sep := ""
