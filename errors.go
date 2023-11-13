@@ -10,8 +10,6 @@ import (
 	"github.com/kanisterio/errkit/internal/caller"
 )
 
-type ErrorDetails map[string]any
-
 var _ error = (*Error)(nil)
 var _ json.Marshaler = (*Error)(nil)
 var _ interface {
@@ -157,15 +155,20 @@ func (e *Error) WithDetail(name string, value any) *Error {
 	return e.WithDetails(ErrorDetails{name: value})
 }
 
-// WithDetails returns a copy of this error including the additional details.
-func (e *Error) WithDetails(details ErrorDetails) *Error {
+func (e *Error) WithDetails(details ...any) *Error {
 	ne := *e // Shallow clone
 	ne.clonedFrom = e
-	var newDetails ErrorDetails = make(ErrorDetails, len(ne.details)+len(details))
-	for k, v := range ne.details {
+
+	if len(details) == 0 {
+		return &ne
+	}
+
+	var newDetails ErrorDetails = make(ErrorDetails, len(e.details)+len(details))
+	for k, v := range e.details {
 		newDetails[k] = v
 	}
-	for k, v := range details {
+
+	for k, v := range ToErrorDetails(details) {
 		newDetails[k] = v
 	}
 	ne.details = newDetails
