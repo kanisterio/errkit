@@ -28,13 +28,13 @@ type Error struct {
 }
 
 // New returns an error with the given message.
-func New(message string) *Error {
-	return newError(message, 3)
+func New(message string, details ...any) *Error {
+	return newError(message, 3, details...)
 }
 
 // Wrap returns a new Error that has the given message and err as the cause.
-func Wrap(err error, message string) *Error {
-	return wrap(err, message)
+func Wrap(err error, message string, details ...any) *Error {
+	return wrap(err, message, details...)
 }
 
 // WithStack wraps the given error with a struct that when serialized to JSON will return
@@ -64,13 +64,13 @@ func WithStack(err error) *Error {
 	return e
 }
 
-func wrap(err error, message string) *Error {
-	e := newError(message, 4)
+func wrap(err error, message string, details ...any) *Error {
+	e := newError(message, 4, details...)
 	e.cause = err
 	return e
 }
 
-func newError(message string, stackDepth int) *Error {
+func newError(message string, stackDepth int, details ...any) *Error {
 	c := caller.GetFrame(stackDepth)
 	e := &Error{
 		error:      errors.New(message),
@@ -79,7 +79,8 @@ func newError(message string, stackDepth int) *Error {
 		// line number is intentionally appended to the file name
 		// this reduces the time needed to read the info and
 		// simplifies the navigation in the IDEs.
-		file: fmt.Sprintf("%s:%d", c.File, c.Line),
+		file:    fmt.Sprintf("%s:%d", c.File, c.Line),
+		details: ToErrorDetails(details),
 	}
 	// shallow copies (e.g. WithField(s)) share baseTag pointer to otherwise unused int
 	tag := 42

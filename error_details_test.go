@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	qt "github.com/frankban/quicktest"
-	"github.com/kastenhq/errkit"
+	"github.com/kanisterio/errkit"
 )
 
 type testStruct struct {

@@ -211,6 +211,41 @@ func TestErrorsWithDetails(t *testing.T) {
 		err := errkit.New("Some error with details").WithDetails("Some text detail", "String value", 123, 456)
 		checkErrorResult(t, err, getResultCheck(invalidKeyResult))
 	})
+
+	t.Run("It should be possible to create an error with details immediately", func(t *testing.T) {
+		err := errkit.New("Some error with details", "Some text detail", "String value", "Some numeric detail", 123)
+		checkErrorResult(t, err, getResultCheck(commonResult))
+	})
+
+	t.Run("It should be possible to wrap an error and add details at once", func(t *testing.T) {
+		err := errkit.Wrap(predefinedErrkitError, "Wrapped error", "Some text detail", "String value", "Some numeric detail", 123)
+		expected := "{\"message\":\"Wrapped error\",\"details\":{\"Some numeric detail\":123,\"Some text detail\":\"String value\"},\"cause\":{\"message\":\"TEST_ERR: Sample of errkit error\"}}"
+		checkErrorResult(t, err, func(orig error, _ errkit.JSONError) error {
+			errStr := orig.Error()
+			type simplifiedStruct struct {
+				Message string            `json:"message,omitempty"`
+				Details map[string]any    `json:"details,omitempty"`
+				Cause   *simplifiedStruct `json:"cause,omitempty"`
+			}
+			var simpl simplifiedStruct
+			e := json.Unmarshal([]byte(errStr), &simpl)
+			if e != nil {
+				return errors.New("unable to unmarshal json representation of an error")
+			}
+
+			simplStr, e := json.Marshal(simpl)
+			if e != nil {
+				return errors.New("unable to marshal simplified error representation to json")
+			}
+
+			if string(simplStr) != expected {
+				return fmt.Errorf("serialized error value is not expected: %s\ngot: %s", expected, simplStr)
+			}
+
+			return nil
+		})
+	})
+
 }
 
 func getStackInfo() (string, int) {
