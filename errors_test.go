@@ -28,7 +28,7 @@ func newTestError(msg string) *testErrorType {
 
 var (
 	predefinedStdError    = errors.New("TEST_ERR: Sample of predefined std error")
-	predefinedErrkitError = errkit.New("TEST_ERR: Sample of errkit error")
+	predefinedErrkitError = errkit.NewPureError("TEST_ERR: Sample of errkit error")
 	predefinedTestError   = newTestError("TEST_ERR: Sample error of custom test type")
 )
 
@@ -87,7 +87,6 @@ func checkErrorResult(t *testing.T, err error, checks ...Check) {
 
 	var unmarshalledError errkit.JSONError
 	unmarshallingErr := unmarshalledError.UnmarshalJSON([]byte(got))
-	//unmarshallingErr := json.Unmarshal([]byte(got), &unmarshalledError)
 	if unmarshallingErr != nil {
 		t.Errorf("serialized error is not a JSON: %s\ngot: %s", unmarshallingErr.Error(), err.Error())
 		return
@@ -100,6 +99,15 @@ func checkErrorResult(t *testing.T, err error, checks ...Check) {
 			return
 		}
 	}
+}
+
+func TestErrorCreation(t *testing.T) {
+	t.Run("It should be possible to create pure errors which could be used as named errors", func(t *testing.T) {
+		e := predefinedErrkitError.Error()
+		if e != "TEST_ERR: Sample of errkit error" {
+			t.Errorf("Unexpected result")
+		}
+	})
 }
 
 func TestErrorsWrapping(t *testing.T) {
