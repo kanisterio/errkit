@@ -72,7 +72,7 @@ func getStackCheck(fnName string, lineNumber int) Check {
 
 func getCauseCheck(cause error) Check {
 	return func(origErr error, jsonErr errkit.JSONError) error {
-		if !errors.Is(origErr, cause) {
+		if !errkit.Is(origErr, cause) {
 			return errors.New("error is not implementing requested type")
 		}
 
@@ -305,7 +305,7 @@ func TestMultipleErrors(t *testing.T) {
 		}
 	})
 
-	t.Run("It should NOT be possible to unrap an error from errors list", func(t *testing.T) {
+	t.Run("It should NOT be possible to unwrap an error from errors list", func(t *testing.T) {
 		err := errkit.Append(predefinedStdError, predefinedTestError)
 		if errors.Unwrap(err) != nil {
 			t.Errorf("Unexpected unwrapping result")

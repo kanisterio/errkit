@@ -17,6 +17,14 @@ var _ interface {
 	Unwrap() error
 } = (*Error)(nil)
 
+// Make an aliases for errors.Is, errors.As, errors.Unwrap
+// To avoid additional imports
+var (
+	Is     = errors.Is
+	As     = errors.As
+	Unwrap = errors.Unwrap
+)
+
 type PureError struct {
 	error
 }
