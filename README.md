@@ -1,20 +1,4 @@
-# Background:
-Working on Kanister, we faced an [issue #1838](https://github.com/kanisterio/kanister/issues/1838), that currently used `github.com/pkg/errors` package is no longer maintained and the repository has been archived.
-
-That is not a big deal, but it means that we won't get any security updates if any breache will be discovered in this package. Also this package lacks some functionality which we would like to have (for instance error details, serialization to JSON). 
-
-At the same moment we have internal implementation of errors package in our internal product.
-
-# Proposed requirements
-1. Own implementation of an error
-2. Based on standard errors package.
-3. Should support serialization to JSON
-4. Should allow to attach details to an error
-5. Should allow to capture current stack location
-6. Should provide ability to collect multiple errors at once
-
-
-# Functionality:
+# Usage:
 
 ## Creation
 ### errkit.New
@@ -62,6 +46,8 @@ Allows to wrap an error (either std error or errkit error) with higher level mes
 
 ### errors.Is and errors.As
 Allows to use standard errors matching
+
+`Errkit` also has an aliases `errkit.Is` and `errkit.As`
 ```go
     // testErrorType which implements std error interface
     type testErrorType struct {
@@ -85,6 +71,8 @@ Allows to use standard errors matching
 
 ### errors.Unwrap
 Allows to use standard erorrs unwrapping
+
+`Errkit` also has an alias `errkit.Unwrap`
 ```go
     var (
 		predefinedError = errors.New("Some predefined error")
