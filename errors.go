@@ -42,7 +42,6 @@ type Error struct {
 	lineNumber int
 	details    ErrorDetails
 	cause      error
-	baseTag    *int // detect shallow copies, not needed in json
 	clonedFrom *Error
 }
 
@@ -91,7 +90,7 @@ func wrap(err error, message string, details ...any) *Error {
 
 func newError(message string, stackDepth int, details ...any) *Error {
 	c := caller.GetFrame(stackDepth)
-	e := &Error{
+	return &Error{
 		error:      errors.New(message),
 		function:   c.Function,
 		lineNumber: c.Line,
@@ -101,16 +100,12 @@ func newError(message string, stackDepth int, details ...any) *Error {
 		file:    fmt.Sprintf("%s:%d", c.File, c.Line),
 		details: ToErrorDetails(details),
 	}
-	// shallow copies (e.g. WithField(s)) share baseTag pointer to otherwise unused int
-	tag := 42
-	e.baseTag = &tag
-	return e
 }
 
 // WithCause adds a cause to the given error.
 func WithCause(err, cause error) error {
 	c := caller.GetFrame(3)
-	e := &Error{
+	return &Error{
 		error:      err,
 		function:   c.Function,
 		lineNumber: c.Line,
@@ -120,10 +115,6 @@ func WithCause(err, cause error) error {
 		file:  fmt.Sprintf("%s:%d", c.File, c.Line),
 		cause: cause,
 	}
-	// shallow copies (e.g. WithField(s)) share baseTag pointer to otherwise unused int
-	tag := 42
-	e.baseTag = &tag
-	return e
 }
 
 // MarshalJSON returns a JSON encoding of e.
