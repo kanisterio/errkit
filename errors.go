@@ -45,6 +45,15 @@ type Error struct {
 	clonedFrom *Error
 }
 
+func (e *Error) Is(target error) bool {
+	if target == nil {
+		return e == target
+	}
+
+	// Check if the target error is of the same type and value
+	return errors.Is(e.error, target)
+}
+
 // New returns an error with the given message.
 func New(message string, details ...any) *Error {
 	return newError(message, 3, details...)
@@ -104,7 +113,7 @@ func newError(message string, stackDepth int, details ...any) *Error {
 
 // WithCause adds a cause to the given error.
 func WithCause(err, cause error) error {
-	c := caller.GetFrame(3)
+	c := caller.GetFrame(2)
 	return &Error{
 		error:      err,
 		function:   c.Function,
