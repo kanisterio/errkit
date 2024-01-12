@@ -64,14 +64,14 @@ func Wrap(err error, message string, details ...any) *Error {
 //	var ErrWellKnownError = errors.New("Well-known error")
 //	...
 //	if someCondition {
-//	    return kerrors.WithStack(ErrWellKnownError)
+//	    return errkit.WithStack(ErrWellKnownError)
 //	}
 func WithStack(err error) *Error {
 	var message string
 	if kerr, ok := err.(*Error); ok {
-		// We shouldn't pass *kerrors.Error to this function, but this will
-		// protect us from the situation when someone used kerrors.New()
-		// instead of errors.New(). Otherwise, the error will be double encoded
+		// We shouldn't pass *errkit.Error to this function, but this will
+		// protect us from the situation when someone used errkit.New()
+		// instead of errors.New() or errkit.NewPureError(). Otherwise, the error will be double encoded
 		// JSON.
 		message = kerr.Message()
 	} else {
