@@ -91,6 +91,22 @@ func getUnwrapCheck(expected error) Check {
 	}
 }
 
+func getDetailsCheck(details errkit.ErrorDetails) Check {
+	return func(origErr error, jsonErr errkit.JSONError) error {
+		if len(details) != len(jsonErr.Details) {
+			return errors.New("details don't match")
+		}
+
+		for k, v := range details {
+			if jsonErr.Details[k] != v {
+				return errors.New("details don't match")
+			}
+		}
+
+		return nil
+	}
+}
+
 func checkErrorResult(t *testing.T, err error, checks ...Check) {
 	t.Helper()
 
@@ -263,6 +279,15 @@ func TestErrorsWithStack(t *testing.T) {
 		err := errkit.WithStack(predefinedTestError)
 		checkErrorResult(t, err,
 			getStackCheck(fnName, lineNumber+1),
+		)
+	})
+
+	t.Run("It should be possible to bind predefined error to current execution location and add some details", func(t *testing.T) {
+		fnName, lineNumber := getStackInfo()
+		err := errkit.WithStack(predefinedTestError, "Key", "value")
+		checkErrorResult(t, err,
+			getStackCheck(fnName, lineNumber+1),
+			getDetailsCheck(errkit.ErrorDetails{"Key": "value"}),
 		)
 	})
 }

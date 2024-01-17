@@ -65,7 +65,7 @@ func Wrap(err error, message string, details ...any) error {
 //	if someCondition {
 //	    return errkit.WithStack(ErrWellKnownError)
 //	}
-func WithStack(err error) error {
+func WithStack(err error, details ...any) error {
 	var message string
 	if kerr, ok := err.(*Error); ok {
 		// We shouldn't pass *errkit.Error to this function, but this will
@@ -77,7 +77,7 @@ func WithStack(err error) error {
 		message = err.Error()
 	}
 
-	e := newError(errors.New(message), 3)
+	e := newError(errors.New(message), 3, details...)
 	e.cause = err
 	return e
 }
