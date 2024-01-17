@@ -20,7 +20,7 @@ type jsonError struct {
 	Function   string          `json:"function,omitempty"`
 	LineNumber int             `json:"linenumber,omitempty"`
 	File       string          `json:"file,omitempty"`
-	Details    ErrorDetails    `json:"fields,omitempty"`
+	Details    ErrorDetails    `json:"details,omitempty"`
 	Cause      json.RawMessage `json:"cause,omitempty"`
 }
 
