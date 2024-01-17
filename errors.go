@@ -168,32 +168,6 @@ func (e *Error) Details() ErrorDetails {
 	return e.details
 }
 
-// WithDetail copies of this error and adds the given detail to the new error. The
-// new error is returned.
-func (e *Error) WithDetail(name string, value any) *Error {
-	return e.WithDetails(ErrorDetails{name: value})
-}
-
-func (e *Error) WithDetails(details ...any) *Error {
-	ne := *e // Shallow clone
-	ne.clonedFrom = e
-
-	if len(details) == 0 {
-		return &ne
-	}
-
-	var newDetails ErrorDetails = make(ErrorDetails, len(e.details)+len(details))
-	for k, v := range e.details {
-		newDetails[k] = v
-	}
-
-	for k, v := range ToErrorDetails(details) {
-		newDetails[k] = v
-	}
-	ne.details = newDetails
-	return &ne
-}
-
 // Error returns a string representation of the error.
 func (e *Error) Error() string {
 	if b, err := e.MarshalJSON(); err == nil {

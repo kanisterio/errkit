@@ -191,13 +191,15 @@ func TestErrorsWithDetails(t *testing.T) {
 	// Expecting the following JSON (except stack) for special case
 	oddResult := "{\"message\":\"Some error with details\",\"details\":{\"Some numeric detail\":\"NOVAL\",\"Some text detail\":\"String value\"}}"
 	invalidKeyResult := "{\"message\":\"Some error with details\",\"details\":{\"BADKEY:(123)\":456,\"Some text detail\":\"String value\"}}"
+	wrappedResult := "{\"message\":\"Wrapped error\",\"details\":{\"Some numeric detail\":123,\"Some text detail\":\"String value\"},\"cause\":{\"message\":\"TEST_ERR: Sample of errkit error\"}}"
 
 	getResultCheck := func(expected string) Check {
 		return func(orig error, _ errkit.JSONError) error {
 			errStr := orig.Error()
 			type simplifiedStruct struct {
-				Message string         `json:"message"`
-				Details map[string]any `json:"details"`
+				Message string            `json:"message"`
+				Details map[string]any    `json:"details,omitempty"`
+				Cause   *simplifiedStruct `json:"cause,omitempty"`
 			}
 			var simpl simplifiedStruct
 			e := json.Unmarshal([]byte(errStr), &simpl)
@@ -218,68 +220,35 @@ func TestErrorsWithDetails(t *testing.T) {
 		}
 	}
 
-	t.Run("It should be possible to create an error, and enrich it with additional details added one by one", func(t *testing.T) {
-		err := errkit.New("Some error with details").WithDetail("Some text detail", "String value").WithDetail("Some numeric detail", 123)
-		checkErrorResult(t, err, getResultCheck(commonResult))
-	})
-
-	t.Run("It should be possible to create an error with additional details added as a map[string]any", func(t *testing.T) {
-		err := errkit.New("Some error with details").WithDetails(errkit.ErrorDetails{
-			"Some text detail":    "String value",
-			"Some numeric detail": 123,
-		})
-		checkErrorResult(t, err, getResultCheck(commonResult))
-	})
-
-	t.Run("It should be possible to create an error with additional details added as a list of key value pairs", func(t *testing.T) {
-		err := errkit.New("Some error with details").WithDetails("Some text detail", "String value", "Some numeric detail", 123)
-		checkErrorResult(t, err, getResultCheck(commonResult))
-	})
-
-	t.Run("It should be possible to create an error with additional details added as a list of key value pairs when list has odd number of values", func(t *testing.T) {
-		err := errkit.New("Some error with details").WithDetails("Some text detail", "String value", "Some numeric detail")
-		checkErrorResult(t, err, getResultCheck(oddResult))
-	})
-
-	t.Run("It should be possible to create an error with additional details added as a list of key value pairs when list has non string key", func(t *testing.T) {
-		err := errkit.New("Some error with details").WithDetails("Some text detail", "String value", 123, 456)
-		checkErrorResult(t, err, getResultCheck(invalidKeyResult))
-	})
-
-	t.Run("It should be possible to create an error with details immediately", func(t *testing.T) {
+	t.Run("It should be possible to create an error with details", func(t *testing.T) {
 		err := errkit.New("Some error with details", "Some text detail", "String value", "Some numeric detail", 123)
+		checkErrorResult(t, err, getResultCheck(commonResult))
+	})
+
+	t.Run("It should be possible to create an error with details using ErrorDetails map", func(t *testing.T) {
+		err := errkit.New("Some error with details", errkit.ErrorDetails{"Some text detail": "String value", "Some numeric detail": 123})
 		checkErrorResult(t, err, getResultCheck(commonResult))
 	})
 
 	t.Run("It should be possible to wrap an error and add details at once", func(t *testing.T) {
 		err := errkit.Wrap(predefinedErrkitError, "Wrapped error", "Some text detail", "String value", "Some numeric detail", 123)
-		expected := "{\"message\":\"Wrapped error\",\"details\":{\"Some numeric detail\":123,\"Some text detail\":\"String value\"},\"cause\":{\"message\":\"TEST_ERR: Sample of errkit error\"}}"
-		checkErrorResult(t, err, func(orig error, _ errkit.JSONError) error {
-			errStr := orig.Error()
-			type simplifiedStruct struct {
-				Message string            `json:"message,omitempty"`
-				Details map[string]any    `json:"details,omitempty"`
-				Cause   *simplifiedStruct `json:"cause,omitempty"`
-			}
-			var simpl simplifiedStruct
-			e := json.Unmarshal([]byte(errStr), &simpl)
-			if e != nil {
-				return errors.New("unable to unmarshal json representation of an error")
-			}
-
-			simplStr, e := json.Marshal(simpl)
-			if e != nil {
-				return errors.New("unable to marshal simplified error representation to json")
-			}
-
-			if string(simplStr) != expected {
-				return fmt.Errorf("serialized error value is not expected: %s\ngot: %s", expected, simplStr)
-			}
-
-			return nil
-		})
+		checkErrorResult(t, err, getResultCheck(wrappedResult))
 	})
 
+	t.Run("It should be possible to wrap an error and add details at once using ErrorDetails map", func(t *testing.T) {
+		err := errkit.Wrap(predefinedErrkitError, "Wrapped error", errkit.ErrorDetails{"Some text detail": "String value", "Some numeric detail": 123})
+		checkErrorResult(t, err, getResultCheck(wrappedResult))
+	})
+
+	t.Run("It should be possible to create an error with details, even when odd number of values passed", func(t *testing.T) {
+		err := errkit.New("Some error with details", "Some text detail", "String value", "Some numeric detail")
+		checkErrorResult(t, err, getResultCheck(oddResult))
+	})
+
+	t.Run("It should be possible to create an error with details, even when detail name is not a string", func(t *testing.T) {
+		err := errkit.New("Some error with details", "Some text detail", "String value", 123, 456)
+		checkErrorResult(t, err, getResultCheck(invalidKeyResult))
+	})
 }
 
 func getStackInfo() (string, int) {
