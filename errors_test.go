@@ -350,10 +350,6 @@ func TestMultipleErrors(t *testing.T) {
 		arr := append(make([]string, 0), predefinedErrStr, someErrStr)
 		arrStr, _ := json.Marshal(arr)
 
-		fmt.Println(someErrStr)
-		fmt.Println(predefinedErrStr)
-		fmt.Println(string(arrStr))
-
 		expectedStr := string(arrStr)
 
 		if str != expectedStr {

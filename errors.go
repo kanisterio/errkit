@@ -42,7 +42,6 @@ type Error struct {
 	lineNumber int
 	details    ErrorDetails
 	cause      error
-	clonedFrom *Error
 }
 
 func (e *Error) Is(target error) bool {
