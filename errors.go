@@ -44,12 +44,12 @@ func (e *Error) Is(target error) bool {
 }
 
 // New returns an error with the given message.
-func New(message string, details ...any) *Error {
+func New(message string, details ...any) error {
 	return newError(message, 3, details...)
 }
 
 // Wrap returns a new Error that has the given message and err as the cause.
-func Wrap(err error, message string, details ...any) *Error {
+func Wrap(err error, message string, details ...any) error {
 	e := newError(message, 3, details...)
 	e.cause = err
 	return e
@@ -65,7 +65,7 @@ func Wrap(err error, message string, details ...any) *Error {
 //	if someCondition {
 //	    return errkit.WithStack(ErrWellKnownError)
 //	}
-func WithStack(err error) *Error {
+func WithStack(err error) error {
 	var message string
 	if kerr, ok := err.(*Error); ok {
 		// We shouldn't pass *errkit.Error to this function, but this will
