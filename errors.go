@@ -45,12 +45,12 @@ func (e *Error) Is(target error) bool {
 
 // New returns an error with the given message.
 func New(message string, details ...any) error {
-	return newError(message, 3, details...)
+	return newError(errors.New(message), 3, details...)
 }
 
 // Wrap returns a new Error that has the given message and err as the cause.
 func Wrap(err error, message string, details ...any) error {
-	e := newError(message, 3, details...)
+	e := newError(errors.New(message), 3, details...)
 	e.cause = err
 	return e
 }
@@ -77,15 +77,15 @@ func WithStack(err error) error {
 		message = err.Error()
 	}
 
-	e := newError(message, 3)
+	e := newError(errors.New(message), 3)
 	e.cause = err
 	return e
 }
 
-func newError(message string, stackDepth int, details ...any) *Error {
+func newError(err error, stackDepth int, details ...any) *Error {
 	c := caller.GetFrame(stackDepth)
 	return &Error{
-		error:      errors.New(message),
+		error:      err,
 		function:   c.Function,
 		lineNumber: c.Line,
 		// line number is intentionally appended to the file name
