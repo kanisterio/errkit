@@ -60,7 +60,9 @@ func New(message string, details ...any) *Error {
 
 // Wrap returns a new Error that has the given message and err as the cause.
 func Wrap(err error, message string, details ...any) *Error {
-	return wrap(err, message, details...)
+	e := newError(message, 3, details...)
+	e.cause = err
+	return e
 }
 
 // WithStack wraps the given error with a struct that when serialized to JSON will return
@@ -86,12 +88,6 @@ func WithStack(err error) *Error {
 	}
 
 	e := newError(message, 3)
-	e.cause = err
-	return e
-}
-
-func wrap(err error, message string, details ...any) *Error {
-	e := newError(message, 4, details...)
 	e.cause = err
 	return e
 }
