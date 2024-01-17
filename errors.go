@@ -10,7 +10,6 @@ import (
 	"github.com/kanisterio/errkit/internal/caller"
 )
 
-var _ error = (*PureError)(nil)
 var _ error = (*Error)(nil)
 var _ json.Marshaler = (*Error)(nil)
 var _ interface {
@@ -20,20 +19,11 @@ var _ interface {
 // Make an aliases for errors.Is, errors.As, errors.Unwrap
 // To avoid additional imports
 var (
-	Is     = errors.Is
-	As     = errors.As
-	Unwrap = errors.Unwrap
+	Is           = errors.Is
+	As           = errors.As
+	Unwrap       = errors.Unwrap
+	NewPureError = errors.New
 )
-
-type PureError struct {
-	error
-}
-
-func NewPureError(message string) *PureError {
-	return &PureError{
-		error: errors.New(message),
-	}
-}
 
 type Error struct {
 	error
