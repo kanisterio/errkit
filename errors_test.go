@@ -80,6 +80,17 @@ func getCauseCheck(cause error) Check {
 	}
 }
 
+func getUnwrapCheck(expected error) Check {
+	return func(origErr error, jsonErr errkit.JSONError) error {
+		err1 := errors.Unwrap(origErr)
+		if err1 != expected {
+			return errors.New("Unable to unwrap error")
+		}
+
+		return nil
+	}
+}
+
 func checkErrorResult(t *testing.T, err error, checks ...Check) {
 	t.Helper()
 
@@ -117,14 +128,7 @@ func TestErrorsWrapping(t *testing.T) {
 			getMessageCheck("Wrapped STD error"), // Checking what msg is serialized on top level
 			filenameCheck,                        // Checking callstack capture
 			getCauseCheck(predefinedStdError),    // Checking that original error was successfully wrapped
-			func(origErr error, jsonErr errkit.JSONError) error {
-				err1 := errors.Unwrap(origErr)
-				if err1 != predefinedStdError {
-					return errors.New("Unable to wrap error cause")
-				}
-
-				return nil
-			},
+			getUnwrapCheck(predefinedStdError),   // Checking that it's possible to unwrap wrapped error
 		)
 	})
 
@@ -174,12 +178,9 @@ func TestErrorsWrapping(t *testing.T) {
 					return errors.New("Unable to match cause error")
 				}
 
-				err1 := errors.Unwrap(origErr)
-				if err1 != cause {
-					return errors.New("Unable to unwrap cause error")
-				}
 				return nil
 			},
+			getUnwrapCheck(cause), // Check that unwrapping of error returns cause
 		)
 	})
 }
