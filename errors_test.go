@@ -203,6 +203,25 @@ func TestErrorsWrapping(t *testing.T) {
 			getDetailsCheck(errkit.ErrorDetails{"Key": "value"}), // Check that details were added
 		)
 	})
+
+	t.Run("It should still be possible to wrap error created with errkit.New, despite the fact it is unwanted case", func(t *testing.T) {
+		errorNotFound := errkit.New("Resource not found")
+		cause := errkit.New("Reason why resource not found")
+		wrappedErr := errkit.WithCause(errorNotFound, cause)
+		checkErrorResult(t, wrappedErr,
+			getMessageCheck("Resource not found"), // Check top level msg
+			filenameCheck,
+			getErrkitIsCheck(cause), // Check that cause was properly wrapped
+			getUnwrapCheck(cause),   // Check that unwrapping of error returns cause
+			func(origErr error, jsonErr errkit.JSONError) error { // Check that only message was taken from the errorNotFound
+				if errkit.Is(origErr, errorNotFound) {
+					return errors.New("error is implementing unexpected type")
+				}
+
+				return nil
+			},
+		)
+	})
 }
 
 func TestErrorsWithDetails(t *testing.T) {
@@ -292,6 +311,18 @@ func TestErrorsWithStack(t *testing.T) {
 		checkErrorResult(t, err,
 			getStackCheck(fnName, lineNumber+1),
 			getDetailsCheck(errkit.ErrorDetails{"Key": "value"}),
+		)
+	})
+
+	t.Run("It should be possible to bind error created with errkit.New, despite the fact it is unwanted case", func(t *testing.T) {
+		errorNotFound := errkit.New("Resource not found")
+		fnName, lineNumber := getStackInfo()
+		err := errkit.WithStack(errorNotFound)
+		checkErrorResult(t, err,
+			getMessageCheck("Resource not found"), // Check top level msg
+			getStackCheck(fnName, lineNumber+1),
+			getErrkitIsCheck(errorNotFound), // Check that errorNotWanted is still matchable
+			getUnwrapCheck(errorNotFound),   // Check that we are able to unwrap original error
 		)
 	})
 }
