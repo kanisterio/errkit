@@ -57,6 +57,9 @@ func Wrap(err error, message string, details ...any) error {
 
 // WithStack wraps the given pure error with a struct that when serialized to JSON will return
 // a JSON object with the error message and error stack data.
+//
+// Returns nil when nil is passed.
+//
 // NOTE: You should not pass result of errkit.New, errkit.Wrap, errkit.WithCause here.
 //
 //	var ErrWellKnownError = errors.New("Well-known error")
@@ -65,6 +68,10 @@ func Wrap(err error, message string, details ...any) error {
 //	    return errkit.WithStack(ErrWellKnownError)
 //	}
 func WithStack(err error, details ...any) error {
+	if err == nil {
+		return nil
+	}
+
 	var message string
 	if kerr, ok := err.(*errkitError); ok {
 		// We shouldn't pass *errkit.errkitError to this function, but this will
@@ -82,6 +89,8 @@ func WithStack(err error, details ...any) error {
 }
 
 // WithCause adds a cause to the given pure error.
+// It returns nil when passed error is nil.
+//
 // NOTE: You should not pass result of errkit.New, errkit.Wrap, errkit.WithStack here.
 //
 // Intended for use when a function wants to return a well known error,
@@ -99,6 +108,10 @@ func WithStack(err error, details ...any) error {
 //	  ...
 //	}
 func WithCause(err, cause error, details ...any) error {
+	if err == nil {
+		return nil
+	}
+
 	if kerr, ok := err.(*errkitError); ok {
 		// We shouldn't pass *errkit.errkitError to this function, but this will
 		// protect us from the situation when someone used errkit.New()

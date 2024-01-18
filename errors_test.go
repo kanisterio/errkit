@@ -222,6 +222,14 @@ func TestErrorsWrapping(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("It should return nil when nil is passed", func(t *testing.T) {
+		cause := errkit.New("Reason why resource not found")
+		wrappedErr := errkit.WithCause(nil, cause)
+		if wrappedErr != nil {
+			t.Errorf("nil expected to be returned")
+		}
+	})
 }
 
 func TestErrorsWithDetails(t *testing.T) {
@@ -324,6 +332,13 @@ func TestErrorsWithStack(t *testing.T) {
 			getErrkitIsCheck(errorNotFound), // Check that errorNotWanted is still matchable
 			getUnwrapCheck(errorNotFound),   // Check that we are able to unwrap original error
 		)
+	})
+
+	t.Run("It should return nil when nil is passed", func(t *testing.T) {
+		wrappedErr := errkit.WithStack(nil)
+		if wrappedErr != nil {
+			t.Errorf("nil expected to be returned")
+		}
 	})
 }
 
