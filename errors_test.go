@@ -338,7 +338,7 @@ func TestMultipleErrors(t *testing.T) {
 		}
 	})
 
-	t.Run("It should be possible to append multiple errkit.Error to errors list", func(t *testing.T) {
+	t.Run("It should be possible to append multiple errkit.errkitError to errors list", func(t *testing.T) {
 		someErr := errkit.New("Some test error")
 		err := errkit.Append(predefinedErrkitError, someErr)
 		str := err.Error()

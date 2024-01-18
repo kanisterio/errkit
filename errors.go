@@ -10,11 +10,11 @@ import (
 	"github.com/kanisterio/errkit/internal/caller"
 )
 
-var _ error = (*Error)(nil)
-var _ json.Marshaler = (*Error)(nil)
+var _ error = (*errkitError)(nil)
+var _ json.Marshaler = (*errkitError)(nil)
 var _ interface {
 	Unwrap() error
-} = (*Error)(nil)
+} = (*errkitError)(nil)
 
 // Make an aliases for errors.Is, errors.As, errors.Unwrap
 // To avoid additional imports
@@ -25,7 +25,7 @@ var (
 	NewPureError = errors.New
 )
 
-type Error struct {
+type errkitError struct {
 	error
 	function   string
 	file       string
@@ -34,7 +34,7 @@ type Error struct {
 	cause      error
 }
 
-func (e *Error) Is(target error) bool {
+func (e *errkitError) Is(target error) bool {
 	if target == nil {
 		return e == target
 	}
@@ -48,7 +48,7 @@ func New(message string, details ...any) error {
 	return newError(errors.New(message), 3, details...)
 }
 
-// Wrap returns a new Error that has the given message and err as the cause.
+// Wrap returns a new errkitError that has the given message and err as the cause.
 func Wrap(err error, message string, details ...any) error {
 	e := newError(errors.New(message), 3, details...)
 	e.cause = err
@@ -67,8 +67,8 @@ func Wrap(err error, message string, details ...any) error {
 //	}
 func WithStack(err error, details ...any) error {
 	var message string
-	if kerr, ok := err.(*Error); ok {
-		// We shouldn't pass *errkit.Error to this function, but this will
+	if kerr, ok := err.(*errkitError); ok {
+		// We shouldn't pass *errkit.errkitError to this function, but this will
 		// protect us from the situation when someone used errkit.New()
 		// instead of errors.New() or errkit.NewPureError().
 		// Otherwise, the error will be double encoded JSON.
@@ -82,9 +82,9 @@ func WithStack(err error, details ...any) error {
 	return e
 }
 
-func newError(err error, stackDepth int, details ...any) *Error {
+func newError(err error, stackDepth int, details ...any) *errkitError {
 	c := caller.GetFrame(stackDepth)
-	return &Error{
+	return &errkitError{
 		error:      err,
 		function:   c.Function,
 		lineNumber: c.Line,
@@ -113,8 +113,8 @@ func newError(err error, stackDepth int, details ...any) *Error {
 // }
 
 func WithCause(err, cause error, details ...any) error {
-	if kerr, ok := err.(*Error); ok {
-		// We shouldn't pass *errkit.Error to this function, but this will
+	if kerr, ok := err.(*errkitError); ok {
+		// We shouldn't pass *errkit.errkitError to this function, but this will
 		// protect us from the situation when someone used errkit.New()
 		// instead of errors.New() or errkit.NewPureError().
 		// Otherwise, the error will be double encoded JSON.
@@ -127,7 +127,7 @@ func WithCause(err, cause error, details ...any) error {
 }
 
 // MarshalJSON returns a JSON encoding of e.
-func (e *Error) MarshalJSON() ([]byte, error) {
+func (e *errkitError) MarshalJSON() ([]byte, error) {
 	je := JSONError{
 		Message:    e.Message(),
 		Function:   e.Function(),
@@ -140,37 +140,37 @@ func (e *Error) MarshalJSON() ([]byte, error) {
 }
 
 // Unwrap returns the chained causal error, or nil if there is no causal error.
-func (e *Error) Unwrap() error {
+func (e *errkitError) Unwrap() error {
 	return e.cause
 }
 
 // Message returns the message for this error.
-func (e *Error) Message() string {
+func (e *errkitError) Message() string {
 	return e.error.Error()
 }
 
 // File returns the file path where the error was created.
-func (e *Error) File() string {
+func (e *errkitError) File() string {
 	return e.file
 }
 
 // Function is the name of the function from where this error originated.
-func (e *Error) Function() string {
+func (e *errkitError) Function() string {
 	return e.function
 }
 
 // LineNumber is where this error originated.
-func (e *Error) LineNumber() int {
+func (e *errkitError) LineNumber() int {
 	return e.lineNumber
 }
 
 // Details returns the map of details in this error.
-func (e *Error) Details() ErrorDetails {
+func (e *errkitError) Details() ErrorDetails {
 	return e.details
 }
 
 // Error returns a string representation of the error.
-func (e *Error) Error() string {
+func (e *errkitError) Error() string {
 	if b, err := e.MarshalJSON(); err == nil {
 		return string(b)
 	}
