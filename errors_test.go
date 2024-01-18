@@ -70,7 +70,7 @@ func getStackCheck(fnName string, lineNumber int) Check {
 	}
 }
 
-func getCauseCheck(cause error) Check {
+func getErrkitIsCheck(cause error) Check {
 	return func(origErr error, jsonErr errkit.JSONError) error {
 		if !errkit.Is(origErr, cause) {
 			return errors.New("error is not implementing requested type")
@@ -127,7 +127,7 @@ func TestErrorsWrapping(t *testing.T) {
 		checkErrorResult(t, wrappedStdError,
 			getMessageCheck("Wrapped STD error"), // Checking what msg is serialized on top level
 			filenameCheck,                        // Checking callstack capture
-			getCauseCheck(predefinedStdError),    // Checking that original error was successfully wrapped
+			getErrkitIsCheck(predefinedStdError), // Checking that original error was successfully wrapped
 			getUnwrapCheck(predefinedStdError),   // Checking that it's possible to unwrap wrapped error
 		)
 	})
@@ -137,7 +137,7 @@ func TestErrorsWrapping(t *testing.T) {
 		checkErrorResult(t, wrappedErrkitError,
 			getMessageCheck("Wrapped errkit error"), // Checking what msg is serialized on top level
 			filenameCheck,                           // Checking callstack capture
-			getCauseCheck(predefinedErrkitError),    // Checking that original error was successfully wrapped
+			getErrkitIsCheck(predefinedErrkitError), // Checking that original error was successfully wrapped
 		)
 	})
 
@@ -146,7 +146,7 @@ func TestErrorsWrapping(t *testing.T) {
 		checkErrorResult(t, wrappedTestError,
 			getMessageCheck("Wrapped TEST error"), // Checking what msg is serialized on top level
 			filenameCheck,                         // Checking callstack capture
-			getCauseCheck(predefinedTestError),    // Checking that original error was successfully wrapped
+			getErrkitIsCheck(predefinedTestError), // Checking that original error was successfully wrapped
 			func(origErr error, jsonErr errkit.JSONError) error {
 				var asErr *testErrorType
 				if errors.As(origErr, &asErr) {
@@ -168,7 +168,7 @@ func TestErrorsWrapping(t *testing.T) {
 		checkErrorResult(t, wrappedErr,
 			getMessageCheck("Resource not found"), // Check top level msg
 			filenameCheck,
-			getCauseCheck(cause), // Check that cause was properly wrapped
+			getErrkitIsCheck(cause), // Check that cause was properly wrapped
 			func(origErr error, jsonErr errkit.JSONError) error {
 				if !errkit.Is(wrappedErr, errorNotFound) {
 					return errors.New("Unable to match predefined error")
