@@ -96,7 +96,22 @@ func newError(err error, stackDepth int, details ...any) *Error {
 	}
 }
 
-// WithCause adds a cause to the given error.
+// WithCause adds a cause to the given pure error.
+//
+// Intended for use when a function wants to return a well known error,
+// but at the same time wants to add a reason E.g.:
+//
+// var ErrNotFound = errkit.NewPureError("Resource not found")
+// ...
+// func SomeFunc() error {
+//   ...
+//   err := DoSomething()
+//   if err != nil {
+//      return errkit.WithCause(ErrNotFound, err)
+//   }
+//   ...
+// }
+
 func WithCause(err, cause error, details ...any) error {
 	if kerr, ok := err.(*Error); ok {
 		// We shouldn't pass *errkit.Error to this function, but this will
