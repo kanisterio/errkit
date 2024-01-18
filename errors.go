@@ -81,20 +81,6 @@ func WithStack(err error, details ...any) error {
 	return e
 }
 
-func newError(err error, stackDepth int, details ...any) *errkitError {
-	c := caller.GetFrame(stackDepth)
-	return &errkitError{
-		error:      err,
-		function:   c.Function,
-		lineNumber: c.Line,
-		// line number is intentionally appended to the file name
-		// this reduces the time needed to read the info and
-		// simplifies the navigation in the IDEs.
-		file:    fmt.Sprintf("%s:%d", c.File, c.Line),
-		details: ToErrorDetails(details),
-	}
-}
-
 // WithCause adds a cause to the given pure error.
 // NOTE: You should not pass result of errkit.New, errkit.Wrap, errkit.WithStack here.
 //
@@ -103,15 +89,15 @@ func newError(err error, stackDepth int, details ...any) *errkitError {
 //
 // var ErrNotFound = errkit.NewPureError("Resource not found")
 // ...
-// func SomeFunc() error {
-//   ...
-//   err := DoSomething()
-//   if err != nil {
-//      return errkit.WithCause(ErrNotFound, err)
-//   }
-//   ...
-// }
-
+//
+//	func SomeFunc() error {
+//	  ...
+//	  err := DoSomething()
+//	  if err != nil {
+//	     return errkit.WithCause(ErrNotFound, err)
+//	  }
+//	  ...
+//	}
 func WithCause(err, cause error, details ...any) error {
 	if kerr, ok := err.(*errkitError); ok {
 		// We shouldn't pass *errkit.errkitError to this function, but this will
@@ -124,6 +110,20 @@ func WithCause(err, cause error, details ...any) error {
 	e := newError(err, 3, details...)
 	e.cause = cause
 	return e
+}
+
+func newError(err error, stackDepth int, details ...any) *errkitError {
+	c := caller.GetFrame(stackDepth)
+	return &errkitError{
+		error:      err,
+		function:   c.Function,
+		lineNumber: c.Line,
+		// line number is intentionally appended to the file name
+		// this reduces the time needed to read the info and
+		// simplifies the navigation in the IDEs.
+		file:    fmt.Sprintf("%s:%d", c.File, c.Line),
+		details: ToErrorDetails(details),
+	}
 }
 
 // MarshalJSON returns a JSON encoding of e.
