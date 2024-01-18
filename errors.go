@@ -97,18 +97,18 @@ func newError(err error, stackDepth int, details ...any) *Error {
 }
 
 // WithCause adds a cause to the given error.
-func WithCause(err, cause error) error {
-	c := caller.GetFrame(2)
-	return &Error{
-		error:      err,
-		function:   c.Function,
-		lineNumber: c.Line,
-		// line number is intentionally appended to the file name
-		// this reduces the time needed to read the info and
-		// simplifies the navigation in the IDEs.
-		file:  fmt.Sprintf("%s:%d", c.File, c.Line),
-		cause: cause,
+func WithCause(err, cause error, details ...any) error {
+	if kerr, ok := err.(*Error); ok {
+		// We shouldn't pass *errkit.Error to this function, but this will
+		// protect us from the situation when someone used errkit.New()
+		// instead of errors.New() or errkit.NewPureError().
+		// Otherwise, the error will be double encoded JSON.
+		err = errors.New(kerr.Message())
 	}
+
+	e := newError(err, 3, details...)
+	e.cause = cause
+	return e
 }
 
 // MarshalJSON returns a JSON encoding of e.

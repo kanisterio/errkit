@@ -184,19 +184,23 @@ func TestErrorsWrapping(t *testing.T) {
 		checkErrorResult(t, wrappedErr,
 			getMessageCheck("Resource not found"), // Check top level msg
 			filenameCheck,
-			getErrkitIsCheck(cause), // Check that cause was properly wrapped
-			func(origErr error, jsonErr errkit.JSONError) error {
-				if !errkit.Is(wrappedErr, errorNotFound) {
-					return errors.New("Unable to match predefined error")
-				}
+			getErrkitIsCheck(cause),         // Check that cause was properly wrapped
+			getErrkitIsCheck(errorNotFound), // Check that predefined error is also matchable
+			getUnwrapCheck(cause),           // Check that unwrapping of error returns cause
+		)
+	})
 
-				if !errkit.Is(wrappedErr, cause) {
-					return errors.New("Unable to match cause error")
-				}
-
-				return nil
-			},
-			getUnwrapCheck(cause), // Check that unwrapping of error returns cause
+	t.Run("It should be possible to wrap predefined error with specific cause and ErrorDetails", func(t *testing.T) {
+		errorNotFound := errkit.NewPureError("Resource not found")
+		cause := errkit.New("Reason why resource not found")
+		wrappedErr := errkit.WithCause(errorNotFound, cause, "Key", "value")
+		checkErrorResult(t, wrappedErr,
+			getMessageCheck("Resource not found"), // Check top level msg
+			filenameCheck,
+			getErrkitIsCheck(cause),                              // Check that cause was properly wrapped
+			getErrkitIsCheck(errorNotFound),                      // Check that predefined error is also matchable
+			getUnwrapCheck(cause),                                // Check that unwrapping of error returns cause
+			getDetailsCheck(errkit.ErrorDetails{"Key": "value"}), // Check that details were added
 		)
 	})
 }
