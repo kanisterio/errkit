@@ -72,19 +72,17 @@ func WithStack(err error, details ...any) error {
 		return nil
 	}
 
-	var message string
+	cause := err // Make shallow copy
 	if kerr, ok := err.(*errkitError); ok {
 		// We shouldn't pass *errkit.errkitError to this function, but this will
 		// protect us from the situation when someone used errkit.New()
 		// instead of errors.New() or errkit.NewPureError().
 		// Otherwise, the error will be double encoded JSON.
-		message = kerr.Message()
-	} else {
-		message = err.Error()
+		err = errors.New(kerr.Message())
 	}
 
-	e := newError(errors.New(message), 3, details...)
-	e.cause = err
+	e := newError(err, 3, details...)
+	e.cause = cause
 	return e
 }
 
