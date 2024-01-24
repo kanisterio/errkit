@@ -1,17 +1,12 @@
 package errkit
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-
-	"github.com/luci/go-render/render"
-
-	"github.com/kanisterio/errkit/internal/caller"
+	"runtime"
 )
 
 var _ error = (*errkitError)(nil)
-var _ json.Marshaler = (*errkitError)(nil)
 var _ interface {
 	Unwrap() error
 } = (*errkitError)(nil)
@@ -27,11 +22,10 @@ var (
 
 type errkitError struct {
 	error
-	function   string
-	file       string
-	lineNumber int
-	details    ErrorDetails
-	cause      error
+	cause   error
+	details ErrorDetails
+	stack   []uintptr
+	callers int
 }
 
 func (e *errkitError) Is(target error) bool {
@@ -45,12 +39,12 @@ func (e *errkitError) Is(target error) bool {
 
 // New returns an error with the given message.
 func New(message string, details ...any) error {
-	return newError(errors.New(message), 3, details...)
+	return newError(errors.New(message), 2, details...)
 }
 
 // Wrap returns a new errkitError that has the given message and err as the cause.
 func Wrap(err error, message string, details ...any) error {
-	e := newError(errors.New(message), 3, details...)
+	e := newError(errors.New(message), 2, details...)
 	e.cause = err
 	return e
 }
@@ -72,17 +66,7 @@ func WithStack(err error, details ...any) error {
 		return nil
 	}
 
-	cause := err // Make shallow copy
-	if kerr, ok := err.(*errkitError); ok {
-		// We shouldn't pass *errkit.errkitError to this function, but this will
-		// protect us from the situation when someone used errkit.New()
-		// instead of errors.New() or errkit.NewPureError().
-		// Otherwise, the error will be double encoded JSON.
-		err = errors.New(kerr.Message())
-	}
-
-	e := newError(err, 3, details...)
-	e.cause = cause
+	e := newError(err, 2, details...)
 	return e
 }
 
@@ -110,44 +94,21 @@ func WithCause(err, cause error, details ...any) error {
 		return nil
 	}
 
-	if kerr, ok := err.(*errkitError); ok {
-		// We shouldn't pass *errkit.errkitError to this function, but this will
-		// protect us from the situation when someone used errkit.New()
-		// instead of errors.New() or errkit.NewPureError().
-		// Otherwise, the error will be double encoded JSON.
-		err = errors.New(kerr.Message())
-	}
-
-	e := newError(err, 3, details...)
+	e := newError(err, 2, details...)
 	e.cause = cause
 	return e
 }
 
 func newError(err error, stackDepth int, details ...any) *errkitError {
-	c := caller.GetFrame(stackDepth)
-	return &errkitError{
-		error:      err,
-		function:   c.Function,
-		lineNumber: c.Line,
-		// line number is intentionally appended to the file name
-		// this reduces the time needed to read the info and
-		// simplifies the navigation in the IDEs.
-		file:    fmt.Sprintf("%s:%d", c.File, c.Line),
+	result := &errkitError{
+		error:   err,
 		details: ToErrorDetails(details),
+		stack:   make([]uintptr, 1),
 	}
-}
 
-// MarshalJSON returns a JSON encoding of e.
-func (e *errkitError) MarshalJSON() ([]byte, error) {
-	je := JSONError{
-		Message:    e.Message(),
-		Function:   e.Function(),
-		LineNumber: e.LineNumber(),
-		File:       e.File(),
-		Details:    e.Details(),
-		Cause:      JSONMarshable(e.Unwrap()),
-	}
-	return json.Marshal(je)
+	result.callers = runtime.Callers(stackDepth+1, result.stack)
+
+	return result
 }
 
 // Unwrap returns the chained causal error, or nil if there is no causal error.
@@ -160,21 +121,6 @@ func (e *errkitError) Message() string {
 	return e.error.Error()
 }
 
-// File returns the file path where the error was created.
-func (e *errkitError) File() string {
-	return e.file
-}
-
-// Function is the name of the function from where this error originated.
-func (e *errkitError) Function() string {
-	return e.function
-}
-
-// LineNumber is where this error originated.
-func (e *errkitError) LineNumber() int {
-	return e.lineNumber
-}
-
 // Details returns the map of details in this error.
 func (e *errkitError) Details() ErrorDetails {
 	return e.details
@@ -182,8 +128,13 @@ func (e *errkitError) Details() ErrorDetails {
 
 // Error returns a string representation of the error.
 func (e *errkitError) Error() string {
-	if b, err := e.MarshalJSON(); err == nil {
-		return string(b)
+	if e.cause == nil {
+		return e.error.Error()
 	}
-	return render.Render(*e)
+
+	return fmt.Sprintf("%s: %s", e.error.Error(), e.cause.Error())
+}
+
+func (e *errkitError) MarshalJSON() ([]byte, error) {
+	return MarshalErrkitErrorToJSON(e)
 }
