@@ -49,7 +49,7 @@ func Wrap(err error, message string, details ...any) error {
 	return e
 }
 
-// WithStack wraps the given pure error with a struct that when serialized to JSON will return
+// WithStack wraps the given error with a struct that when serialized to JSON will return
 // a JSON object with the error message and error stack data.
 //
 // Returns nil when nil is passed.
@@ -135,6 +135,7 @@ func (e *errkitError) Error() string {
 	return fmt.Sprintf("%s: %s", e.error.Error(), e.cause.Error())
 }
 
+// MarshalJSON is helping json logger to log error in a json format
 func (e *errkitError) MarshalJSON() ([]byte, error) {
 	return MarshalErrkitErrorToJSON(e)
 }
