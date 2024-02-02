@@ -14,10 +14,10 @@ var _ interface {
 // Make an aliases for errors.Is, errors.As, errors.Unwrap
 // To avoid additional imports
 var (
-	Is           = errors.Is
-	As           = errors.As
-	Unwrap       = errors.Unwrap
-	NewPureError = errors.New
+	Is             = errors.Is
+	As             = errors.As
+	Unwrap         = errors.Unwrap
+	NewSentinelErr = errors.New
 )
 
 type errkitError struct {
@@ -78,7 +78,7 @@ func WithStack(err error, details ...any) error {
 // Intended for use when a function wants to return a well known error,
 // but at the same time wants to add a reason E.g.:
 //
-// var ErrNotFound = errkit.NewPureError("Resource not found")
+// var ErrNotFound = errkit.NewSentinelErr("Resource not found")
 // ...
 //
 //	func SomeFunc() error {

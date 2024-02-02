@@ -14,30 +14,30 @@ When creating an error, we can use one of the following ways. All errors created
 Sometimes it could be useful to create predefined errors. Such errors will not capture the stack.
 ```go
 var (
-    NotFoundError := errkit.NewPureError("Not found")
-    AlreadyExists := errkit.NewPureError("Already exists")
+    ErrNotFound := errkit.NewSentinelErr("Not found")
+    ErrAlreadyExists := errkit.NewSentinelErr("Already exists")
 )
 
 func Foo() error {
     ...
-    return NotFoundError
+    return ErrNotFound
 }
 ```
 
 ## Wrapping
 
 ### Adding stack trace
-If you are interested in adding information about the line and filename where the error happened, you can do the following:
+If you are interested in adding information about the line and filename where the sentinel error happened, you can do the following:
 ```go
 func Foo() error {
     ...
-    err := errkit.WithStack(NotFoundError)
+    err := errkit.WithStack(ErrNotFound)
     return err
 }
 
 func Bar() error {
     err := Foo()
-    if err != nil && errkit.Is(err, NotFoundError) {
+    if err != nil && errkit.Is(err, ErrNotFound) {
         fmt.Println("Resource not found, do nothing")
         return nil
     }
@@ -46,12 +46,12 @@ func Bar() error {
 ```
 
 ### Adding error cause information
-Sometimes you might be interested in returning a predefined error, but also add some cause error to it, in such cases you can do the following:
+Sometimes you might be interested in returning a sentinel error, but also add some cause error to it, in such cases you can do the following:
 ```go
 func FetchSomething(ID string) error {
     err := doSomething() // Here we have an error 
     if err != nil { // At this step we decide that in such a case we'd like to say that the resource is not found
-        return errkit.WithCause(NotFoundError, err)
+        return errkit.WithCause(ErrNotFound, err)
     }
     
     return nil
@@ -63,7 +63,7 @@ func FooBar() error {
         return nil
     }
     
-    if errkit.Is(err, NotFoundError) {
+    if errkit.Is(err, ErrNotFound) {
         return nil // Not found is an expected scenario here, do nothing
     }
     
@@ -89,14 +89,14 @@ func LoadProfile() error {
 If needed, you can always get the wrapped error using the standard errors.Unwrap method, it also has an alias errkit.Unwrap
 ```go
     var (
-		predefinedError = errors.New("Some predefined error")
+		ErrSomething = errkit.NewSentinelErr("Some error")
     )   
 
-    wrappedError := errkit.Wrap(predefinedError, "Wrapped error")
+    wrappedError := errkit.Wrap(ErrSomething, "Wrapped error")
 
     err := errors.Unwrap(wrappedError)
-    if err != predefinedStdError {
-        return errors.New("Unable to wrap error cause")
+    if err != ErrSomething {
+        return errors.New("Unable to unwrap error cause")
     }
 ```
 
@@ -109,11 +109,11 @@ You can use standard errors matching methods like errors.Is and errors.As, they 
     }
 	
     var (
-        predefinedTestError = newTestError("Sample error of custom type")
+        ErrTestType = newTestError("Sample error of custom type")
     )
 
-    wrappedTestError := errkit.Wrap(predefinedTestError, "Wrapped TEST error")
-    if !errors.Is(wrappedTestError, predefinedTestError) {
+    wrappedTestError := errkit.Wrap(ErrTestType, "Wrapped TEST error")
+    if !errors.Is(wrappedTestError, ErrTestType) {
         return errors.New("error is not implementing requested type")
     }
 
