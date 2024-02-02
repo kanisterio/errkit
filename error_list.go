@@ -69,7 +69,7 @@ func (e ErrorList) MarshalJSON() ([]byte, error) {
 
 	je.Errors = make([]json.RawMessage, 0, len(e))
 	for i := range e {
-		raw, err := json.Marshal(JSONMarshable(e[i]))
+		raw, err := json.Marshal(jsonMarshable(e[i]))
 		if err != nil {
 			return nil, err
 		}

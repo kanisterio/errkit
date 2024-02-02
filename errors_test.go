@@ -32,19 +32,36 @@ var (
 	predefinedTestError     = newTestError("TEST_ERR: Sample error of custom test type")
 )
 
-type Check func(originalErr error, jsonErr errkit.JSONError) error
+type Check func(originalErr error, data []byte) error
+
+func unmarshalJsonError(data []byte, target any) error {
+	unmarshallingErr := json.Unmarshal(data, target)
+	if unmarshallingErr != nil {
+		return fmt.Errorf("Unable to unmarshal error %s\n%s", string(data), unmarshallingErr.Error())
+	}
+
+	return nil
+}
 
 func getMessageCheck(msg string) Check {
-	return func(_ error, err errkit.JSONError) error {
-		if err.Message != msg {
-			return fmt.Errorf("error message does not match the expectd\nexpected: %s\nactual: %s", msg, err.Message)
+	return func(err error, data []byte) error {
+		var unmarshalledError struct {
+			Message string `json:"message,omitempty"`
+		}
+
+		if e := unmarshalJsonError(data, &unmarshalledError); e != nil {
+			return e
+		}
+
+		if unmarshalledError.Message != msg {
+			return fmt.Errorf("error message does not match the expectd\nexpected: %s\nactual: %s", msg, unmarshalledError.Message)
 		}
 		return nil
 	}
 }
 
 func getTextCheck(msg string) Check {
-	return func(origError error, _ errkit.JSONError) error {
+	return func(origError error, _ []byte) error {
 		if origError.Error() != msg {
 			return fmt.Errorf("error text does not match the expected\nexpected: %s\nactual: %s", msg, origError.Error())
 		}
@@ -52,27 +69,44 @@ func getTextCheck(msg string) Check {
 	}
 }
 
-func filenameCheck(_ error, err errkit.JSONError) error {
+func filenameCheck(_ error, data []byte) error {
 	_, filename, _, _ := runtime.Caller(1)
-	if !strings.HasPrefix(err.File, filename) {
-		return fmt.Errorf("error occured in an unexpected file: %s", err.File)
+	var unmarshalledError struct {
+		File string `json:"file,omitempty"`
 	}
+	if e := unmarshalJsonError(data, &unmarshalledError); e != nil {
+		return e
+	}
+
+	if !strings.HasPrefix(unmarshalledError.File, filename) {
+		return fmt.Errorf("error occured in an unexpected file. expected: %s\ngot: %s", filename, unmarshalledError.File)
+	}
+
 	return nil
 }
 
 func getStackCheck(fnName string, lineNumber int) Check {
-	return func(err error, jsonErr errkit.JSONError) error {
-		e := filenameCheck(err, jsonErr)
+	return func(err error, data []byte) error {
+		e := filenameCheck(err, data)
 		if e != nil {
 			return e
 		}
 
-		if jsonErr.LineNumber != lineNumber {
-			return fmt.Errorf("Line number does not match\nexpected: %d\ngot: %d", lineNumber, jsonErr.LineNumber)
+		var unmarshalledError struct {
+			LineNumber int    `json:"linenumber,omitempty"`
+			Function   string `json:"function,omitempty"`
 		}
 
-		if jsonErr.Function != fnName {
-			return fmt.Errorf("Function name does not match\nexpected: %s\ngot: %s", fnName, jsonErr.Function)
+		if e := unmarshalJsonError(data, &unmarshalledError); e != nil {
+			return e
+		}
+
+		if unmarshalledError.LineNumber != lineNumber {
+			return fmt.Errorf("Line number does not match\nexpected: %d\ngot: %d", lineNumber, unmarshalledError.LineNumber)
+		}
+
+		if unmarshalledError.Function != fnName {
+			return fmt.Errorf("Function name does not match\nexpected: %s\ngot: %s", fnName, unmarshalledError.Function)
 		}
 
 		return nil
@@ -80,7 +114,7 @@ func getStackCheck(fnName string, lineNumber int) Check {
 }
 
 func getErrkitIsCheck(cause error) Check {
-	return func(origErr error, jsonErr errkit.JSONError) error {
+	return func(origErr error, _ []byte) error {
 		if !errkit.Is(origErr, cause) {
 			return errors.New("error is not implementing requested type")
 		}
@@ -90,7 +124,7 @@ func getErrkitIsCheck(cause error) Check {
 }
 
 func getUnwrapCheck(expected error) Check {
-	return func(origErr error, jsonErr errkit.JSONError) error {
+	return func(origErr error, _ []byte) error {
 		err1 := errors.Unwrap(origErr)
 		if err1 != expected {
 			return errors.New("Unable to unwrap error")
@@ -101,13 +135,21 @@ func getUnwrapCheck(expected error) Check {
 }
 
 func getDetailsCheck(details errkit.ErrorDetails) Check {
-	return func(origErr error, jsonErr errkit.JSONError) error {
-		if len(details) != len(jsonErr.Details) {
+	return func(_ error, data []byte) error {
+		var unmarshalledError struct {
+			Details errkit.ErrorDetails `json:"details,omitempty"`
+		}
+
+		if e := unmarshalJsonError(data, &unmarshalledError); e != nil {
+			return e
+		}
+
+		if len(details) != len(unmarshalledError.Details) {
 			return errors.New("details don't match")
 		}
 
 		for k, v := range details {
-			if jsonErr.Details[k] != v {
+			if unmarshalledError.Details[k] != v {
 				return errors.New("details don't match")
 			}
 		}
@@ -125,15 +167,8 @@ func checkErrorResult(t *testing.T, err error, checks ...Check) {
 		return
 	}
 
-	var unmarshalledError errkit.JSONError
-	unmarshallingErr := unmarshalledError.UnmarshalJSON([]byte(got))
-	if unmarshallingErr != nil {
-		t.Errorf("serialized error is not a JSON: %s\ngot: %s", unmarshallingErr.Error(), err.Error())
-		return
-	}
-
 	for _, checker := range checks {
-		e := checker(err, unmarshalledError)
+		e := checker(err, got)
 		if e != nil {
 			t.Errorf("%s", e.Error())
 			return
@@ -189,7 +224,7 @@ func TestErrorsWrapping(t *testing.T) {
 			getMessageCheck("Wrapped TEST error"), // Checking what msg is serialized on top level
 			filenameCheck,                         // Checking callstack capture
 			getErrkitIsCheck(predefinedTestError), // Checking that original error was successfully wrapped
-			func(origErr error, jsonErr errkit.JSONError) error {
+			func(origErr error, _ []byte) error {
 				var asErr *testErrorType
 				if errors.As(origErr, &asErr) {
 					if asErr.Error() == predefinedTestError.Error() {
@@ -263,7 +298,7 @@ func TestErrorsWithDetails(t *testing.T) {
 	wrappedResult := "{\"message\":\"Wrapped error\",\"details\":{\"Some numeric detail\":123,\"Some text detail\":\"String value\"},\"cause\":{\"message\":\"TEST_ERR: Sample of sentinel error\"}}"
 
 	getResultCheck := func(expected string) Check {
-		return func(orig error, _ errkit.JSONError) error {
+		return func(orig error, _ []byte) error {
 			b, _ := json.Marshal(orig)
 			errStr := string(b)
 			type simplifiedStruct struct {
