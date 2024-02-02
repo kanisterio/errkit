@@ -84,10 +84,10 @@ func (e ErrorList) MarshalJSON() ([]byte, error) {
 // then the other error is returned.
 func Append(err1, err2 error) error {
 	if err1 == nil {
-		return err2
+		return ErrorList{err2}
 	}
 	if err2 == nil {
-		return err1
+		return ErrorList{err1}
 	}
 	el1, ok1 := err1.(ErrorList)
 	el2, ok2 := err2.(ErrorList)

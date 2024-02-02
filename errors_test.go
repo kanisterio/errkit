@@ -424,4 +424,35 @@ func TestMultipleErrors(t *testing.T) {
 			return
 		}
 	})
+
+	t.Run("It should return list of errors when trying to append nil to error", func(t *testing.T) {
+		err1 := errors.New("First error is an stderror")
+		err2 := newTestError("Second error is a test error")
+		err := errkit.Append(err1, nil)
+		str := err.Error()
+		expectedStr := "[\"First error is an stderror\"]"
+
+		if str != expectedStr {
+			t.Errorf("Unexpected result.\nexpected: %s\ngot: %s", expectedStr, str)
+			return
+		}
+
+		err = errkit.Append(nil, err2)
+		str = err.Error()
+		expectedStr = "[\"Second error is a test error\"]"
+
+		if str != expectedStr {
+			t.Errorf("Unexpected result.\nexpected: %s\ngot: %s", expectedStr, str)
+			return
+		}
+
+		err = errkit.Append(err, err1)
+		str = err.Error()
+		expectedStr = "[\"Second error is a test error\",\"First error is an stderror\"]"
+
+		if str != expectedStr {
+			t.Errorf("Unexpected result.\nexpected: %s\ngot: %s", expectedStr, str)
+			return
+		}
+	})
 }
