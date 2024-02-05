@@ -20,41 +20,66 @@ At the same moment we have internal implementation of errors package in our inte
 ### errkit.New
 It should be possible to create an erorr with message. If needed, additional details could be passed as key-value pairs.
 ```go
-	someError := errkit.New("Sample of std error")
-	someErrorWithDetails := errkit.New("Sample of std error", "DetailName", "String detail value", "NumericDetailName", 123)
+	someError := errkit.New("Sample of error")
+	someErrorWithDetails := errkit.New("Sample of error", "DetailName", "String detail value", "NumericDetailName", 123)
+    anotherErrorWithDetails := errkit.WithDetails("Sample of error", errkit.ErrorDetails{
+        "Some text detail": "String value",
+        "Some numeric detail": 123,
+    })
 ```
 
-### errkit.NewPureError
-Supposed to be used for predefined errors without stack trace and details
+### errkit.NewSentinelErr
+It should be possible to create an error without a stack trace and details, which is intended to be used for predefined errors.
 ```go
 var (
-    NotFoundError = errkit.NewPureError("Not found")
+    NotFoundError = errkit.NewSentinelErr("Not found")
 )
+```
+## Wrapping and matching
+### errkit.Wrap
+It should be possible to encapsulate an error (either a standard error or an errkit error) with a higher-level message.
+If needed, additional details could be passed as key-value pairs.
+
+NOTE: `Wrap` is not the same as `WithCause`.
+```go
+    func foo() error {
+		return errors.New("Sample of std error")
+    }
+	func bar() error {
+		return errkit.New("Sample of errkit error")
+    }
+    
+    ...
+    
+    wrappedStdError := errkit.Wrap(foo(), "Wrapped STD error")
+    wrappedErrkitError := errkit.Wrap(bar(), "Wrapped errkit error")
+}
 ```
 
 ### errkit.WithStack
-Supposed to be used for adding stack trace to predefined errors
+It should be possible to add a stack trace to predefined errors (the same should work with regular errors).
+If needed, additional details could be passed as key-value pairs.
 ```go
 var (
-    NotFoundError := errors.NewPureError("NotFound")
+    NotFoundError := errors.NewSentinelErr("NotFound")
 )
 
 err := errkit.WithStack(NotFoundError)
 ```
 
 ### errkit.WithCause
-Supposed to be used for adding cause for predefined errors
-
+It should be possible to add a cause to predefined errors (the same should work with regular errors).
+If needed, additional details could be passed as key-value pairs.
 NOTE: `WithCause` is not the same as `Wrap`.
 ```go
 var (
-    NotFoundError := errors.NewPureError("NotFound")
+    NotFoundError := errors.NewSentinelErr("NotFound")
 )
 
-func FetchSomething() error {
+func FetchSomething(ID string) error {
     err := apiCall() // Here
     if err != nil {
-        return errkit.WithCause(NotFoundError, err)
+        return errkit.WithCause(NotFoundError, err, "id", ID)
     }
 	
     return nil
@@ -75,53 +100,55 @@ func FooBar() error {
 }
 ```
 
-## Adding details to an error
-### errkit.WithDetail
-Supposed to be used for adding single detail to an error.
+### errkit.Append
+It should be possible to group errors. This is useful when some function executes multiple simultaneous actions and some of them could fail. 
 ```go
-    err := errkit.New("Some error with details")
+func performOperation(id int) {
+    defer wg.Done()
     ...
-    err = err.WithDetail("Some text detail", "String value")
-```
-### errkit.WithDetails
-Supposed to be used for adding one or more details to an error.
+    // Particular operation ended with an error
+    errCh <- errkit.New("Something went wrong", "detailKey", detailValue)
+}
 
-It should be possible to add details as a list of key-value pairs: 
-```go
-    err := errkit.New("Some error with details")
-    ...
-    err = err.WithDetails(
-        "Some text detail", "String value",
-        "Some numeric detail", 123,
-    )
-```
-or as a map
-```go
-    err := errkit.New("Some error with details")
-    ...
-    err = err.WithDetails(errkit.ErrorDetails{
-        "Some text detail": "String value",
-        "Some numeric detail": 123,
-    })
-```
+// doOperationsConcurrently will return list of errors
+func doOperationsConcurrently func() error {
+    // Run operations in goroutines
+    wg.Add(3)
+    go performOperation(1) // This operation will fail
+    go performOperation(2) // This operation will succeed
+    go performOperation(3) // This operation will fail
 
-## Wrapping and matching
-### errkit.Wrap
-It should be possible to wrap an error (either std error or errkit error) with higher level message.
+    go func() {
+        wg.Wait()
+        close(errCh)
+    }()
 
-NOTE: `Wrap` is not the same as `WithCause`.
-```go
-    func foo() error {
-		return errors.New("Sample of std error")
+    // Collect errors from the channel
+    var result error
+    for err := range errCh {
+        result = errkit.Append(result, err)
     }
-	func bar() error {
-		return errkit.New("Sample of errkit error")
+
+    return result
+}
+
+func foo() error {
+    // Now we can work with list
+    err := doOperationsConcurrently()
+    if err == nil {
+        return nil
     }
     
-    ...
+    if errkit.Is(err, ErrNotFound) {
+        // React on not found
+        return
+    }
     
-    wrappedStdError := errkit.Wrap(foo(), "Wrapped STD error")
-    wrappedErrkitError := errkit.Wrap(bar(), "Wrapped errkit error")
+    // Otherwise we can handle particular errors (very rarely needed case)
+    errList, _ := err.(errkit.ErrorList)
+    for e := range errList {
+        // Analyze particular errors and react on them if needed				
+    }  
 }
 ```
 
