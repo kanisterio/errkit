@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/kanisterio/errkit"
@@ -489,5 +490,87 @@ func TestMultipleErrors(t *testing.T) {
 			t.Errorf("Unexpected result.\nexpected: %s\ngot: %s", expectedStr, str)
 			return
 		}
+	})
+}
+
+func TestStackViaGoroutine(t *testing.T) {
+	t.Run("It should be possible to keep erorr stack when passing an error via goroutine", func(t *testing.T) {
+		var wg sync.WaitGroup
+		errCh := make(chan error)
+
+		sentinelErr := errkit.NewSentinelErr("Sentinel error")
+
+		fnName, lineNumber := getStackInfo()
+		var lock sync.Mutex
+		var orderedFailures []int
+		performOperation := func(id int) {
+			defer wg.Done()
+
+			// Simulate an operation resulting in an error
+			if id != 2 {
+				lock.Lock()
+				defer lock.Unlock()
+				orderedFailures = append(orderedFailures, id)
+				errCh <- errkit.WithStack(sentinelErr, "id", id)
+			}
+		}
+
+		doOperationsConcurrently := func() error {
+			// Run operations in goroutines
+			wg.Add(3)
+			go performOperation(1) // This operation will fail
+			go performOperation(2) // This operation will succeed
+			go performOperation(3) // This operation will fail
+
+			go func() {
+				wg.Wait()
+				close(errCh)
+			}()
+			var result error
+
+			// Collect errors from the channel
+			for err := range errCh {
+				result = errkit.Append(result, err)
+			}
+
+			return result
+		}
+
+		err := doOperationsConcurrently()
+		expectedErrorString := "[\"Sentinel error\",\"Sentinel error\"]"
+		if err.Error() != expectedErrorString {
+			t.Errorf("Unexpected result.\nexpected: %s\ngot: %s", expectedErrorString, err.Error())
+			return
+		}
+		checkErrorResult(t, err,
+			getMessageCheck("2 errors have occurred"), // Check top level msg
+			getErrkitIsCheck(sentinelErr),             // Check that sentinel error is still matchable
+			getUnwrapCheck(nil),                       // Check that we unwrap does not work on error list
+		)
+
+		errList, ok := err.(errkit.ErrorList)
+		if !ok {
+			t.Errorf("Unexpected error type.")
+			return
+		}
+
+		err1 := errList[0]
+		err2 := errList[1]
+
+		checkErrorResult(t, err1,
+			getMessageCheck("Sentinel error"),
+			getStackCheck(fnName+".1", lineNumber+11),
+			getDetailsCheck(errkit.ErrorDetails{
+				"id": float64(orderedFailures[0]),
+			}),
+		)
+
+		checkErrorResult(t, err2,
+			getMessageCheck("Sentinel error"),
+			getStackCheck(fnName+".1", lineNumber+11),
+			getDetailsCheck(errkit.ErrorDetails{
+				"id": float64(orderedFailures[1]),
+			}),
+		)
 	})
 }
