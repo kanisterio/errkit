@@ -2,10 +2,7 @@ module github.com/kanisterio/errkit
 
 go 1.21.0
 
-require (
-	github.com/frankban/quicktest v1.14.6
-	github.com/luci/go-render v0.0.0-20160219211803-9a04cc21af0f
-)
+require github.com/frankban/quicktest v1.14.6
 
 require (
 	github.com/google/go-cmp v0.5.9 // indirect
