@@ -3,26 +3,9 @@ package errkit
 import (
 	"encoding"
 	"encoding/json"
-	"runtime"
-	"strings"
+
+	"github.com/kanisterio/errkit/internal/stack"
 )
-
-func getLocationFromStack(stack []uintptr, callers int) (function, file string, line int) {
-	if callers < 1 {
-		// Failure potentially due to wrongly specified depth
-		return "Unknown", "Unknown", 0
-	}
-
-	frames := runtime.CallersFrames(stack[:callers])
-	var frame runtime.Frame
-	frame, _ = frames.Next()
-	filename := frame.File
-	if paths := strings.SplitAfterN(frame.File, "/go/src/", 2); len(paths) > 1 {
-		filename = paths[1]
-	}
-
-	return frame.Function, filename, frame.Line
-}
 
 type jsonError struct {
 	Message    string       `json:"message,omitempty"`
@@ -97,7 +80,7 @@ func MarshalErrkitErrorToJSON(err *errkitError) ([]byte, error) {
 		return nil, nil
 	}
 
-	function, file, line := getLocationFromStack(err.stack, err.callers)
+	function, file, line := stack.GetLocationFromStack(err.stack, err.callers)
 
 	result := jsonError{
 		Message:    err.Message(),

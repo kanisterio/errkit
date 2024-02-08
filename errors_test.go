@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/kanisterio/errkit"
-	"github.com/kanisterio/errkit/internal/caller"
+	"github.com/kanisterio/errkit/internal/stack"
 )
 
 type testErrorType struct {
@@ -358,8 +358,10 @@ func TestErrorsWithDetails(t *testing.T) {
 }
 
 func getStackInfo() (string, int) {
-	c := caller.GetFrame(2)
-	return c.Function, c.Line
+	fpcs := make([]uintptr, 1)
+	num := runtime.Callers(2, fpcs)
+	fn, _, line := stack.GetLocationFromStack(fpcs, num)
+	return fn, line
 }
 
 func TestErrorsWithStack(t *testing.T) {
