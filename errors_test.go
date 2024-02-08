@@ -28,9 +28,9 @@ func newTestError(msg string) *testErrorType {
 }
 
 var (
-	predefinedStdError      = errors.New("TEST_ERR: Sample of predefined std error")
-	predefinedSentinelError = errkit.NewSentinelErr("TEST_ERR: Sample of sentinel error")
-	predefinedTestError     = newTestError("TEST_ERR: Sample error of custom test type")
+	errPredefinedStdError      = errors.New("TEST_ERR: Sample of predefined std error")
+	errPredefinedSentinelError = errkit.NewSentinelErr("TEST_ERR: Sample of sentinel error")
+	errPredefinedTestError     = newTestError("TEST_ERR: Sample error of custom test type")
 )
 
 type Check func(originalErr error, data []byte) error
@@ -179,7 +179,7 @@ func checkErrorResult(t *testing.T, err error, checks ...Check) {
 
 func TestErrorCreation(t *testing.T) {
 	t.Run("It should be possible to create sentinel errors", func(t *testing.T) {
-		e := predefinedSentinelError.Error()
+		e := errPredefinedSentinelError.Error()
 		if e != "TEST_ERR: Sample of sentinel error" {
 			t.Errorf("Unexpected result")
 		}
@@ -188,23 +188,23 @@ func TestErrorCreation(t *testing.T) {
 
 func TestErrorsWrapping(t *testing.T) {
 	t.Run("It should be possible to wrap std error, which should be stored as cause", func(t *testing.T) {
-		wrappedStdError := errkit.Wrap(predefinedStdError, "Wrapped STD error")
+		wrappedStdError := errkit.Wrap(errPredefinedStdError, "Wrapped STD error")
 		checkErrorResult(t, wrappedStdError,
 			getMessageCheck("Wrapped STD error"),                                        // Checking what msg is serialized on top level
 			getTextCheck("Wrapped STD error: TEST_ERR: Sample of predefined std error"), // Checking what error message is generated
-			filenameCheck,                        // Checking callstack capture
-			getErrkitIsCheck(predefinedStdError), // Checking that original error was successfully wrapped
-			getUnwrapCheck(predefinedStdError),   // Checking that it's possible to unwrap wrapped error
+			filenameCheck,                           // Checking callstack capture
+			getErrkitIsCheck(errPredefinedStdError), // Checking that original error was successfully wrapped
+			getUnwrapCheck(errPredefinedStdError),   // Checking that it's possible to unwrap wrapped error
 		)
 	})
 
 	t.Run("It should be possible to wrap errkit sentinel error, which should be stored as cause", func(t *testing.T) {
-		wrappedErrkitError := errkit.Wrap(predefinedSentinelError, "Wrapped errkit error")
+		wrappedErrkitError := errkit.Wrap(errPredefinedSentinelError, "Wrapped errkit error")
 		checkErrorResult(t, wrappedErrkitError,
 			getMessageCheck("Wrapped errkit error"), // Checking what msg is serialized on top level
 			getTextCheck("Wrapped errkit error: TEST_ERR: Sample of sentinel error"),
 			filenameCheck, // Checking callstack capture
-			getErrkitIsCheck(predefinedSentinelError), // Checking that original error was successfully wrapped
+			getErrkitIsCheck(errPredefinedSentinelError), // Checking that original error was successfully wrapped
 		)
 	})
 
@@ -220,15 +220,15 @@ func TestErrorsWrapping(t *testing.T) {
 	})
 
 	t.Run("It should be possible to wrap custom error implementing error interface, which should be stored as cause", func(t *testing.T) {
-		wrappedTestError := errkit.Wrap(predefinedTestError, "Wrapped TEST error")
+		wrappedTestError := errkit.Wrap(errPredefinedTestError, "Wrapped TEST error")
 		checkErrorResult(t, wrappedTestError,
-			getMessageCheck("Wrapped TEST error"), // Checking what msg is serialized on top level
-			filenameCheck,                         // Checking callstack capture
-			getErrkitIsCheck(predefinedTestError), // Checking that original error was successfully wrapped
+			getMessageCheck("Wrapped TEST error"),    // Checking what msg is serialized on top level
+			filenameCheck,                            // Checking callstack capture
+			getErrkitIsCheck(errPredefinedTestError), // Checking that original error was successfully wrapped
 			func(origErr error, _ []byte) error {
 				var asErr *testErrorType
 				if errors.As(origErr, &asErr) {
-					if asErr.Error() == predefinedTestError.Error() {
+					if asErr.Error() == errPredefinedTestError.Error() {
 						return nil
 					}
 					return errors.New("invalid casting of error cause")
@@ -337,12 +337,12 @@ func TestErrorsWithDetails(t *testing.T) {
 	})
 
 	t.Run("It should be possible to wrap an error and add details at once", func(t *testing.T) {
-		err := errkit.Wrap(predefinedSentinelError, "Wrapped error", "Some text detail", "String value", "Some numeric detail", 123)
+		err := errkit.Wrap(errPredefinedSentinelError, "Wrapped error", "Some text detail", "String value", "Some numeric detail", 123)
 		checkErrorResult(t, err, getResultCheck(wrappedResult))
 	})
 
 	t.Run("It should be possible to wrap an error and add details at once using ErrorDetails map", func(t *testing.T) {
-		err := errkit.Wrap(predefinedSentinelError, "Wrapped error", errkit.ErrorDetails{"Some text detail": "String value", "Some numeric detail": 123})
+		err := errkit.Wrap(errPredefinedSentinelError, "Wrapped error", errkit.ErrorDetails{"Some text detail": "String value", "Some numeric detail": 123})
 		checkErrorResult(t, err, getResultCheck(wrappedResult))
 	})
 
@@ -367,7 +367,7 @@ func getStackInfo() (string, int) {
 func TestErrorsWithStack(t *testing.T) {
 	t.Run("It should be possible to bind predefined error to current execution location", func(t *testing.T) {
 		fnName, lineNumber := getStackInfo()
-		err := errkit.WithStack(predefinedTestError)
+		err := errkit.WithStack(errPredefinedTestError)
 		checkErrorResult(t, err,
 			getStackCheck(fnName, lineNumber+1),
 		)
@@ -375,7 +375,7 @@ func TestErrorsWithStack(t *testing.T) {
 
 	t.Run("It should be possible to bind predefined error to current execution location and add some details", func(t *testing.T) {
 		fnName, lineNumber := getStackInfo()
-		err := errkit.WithStack(predefinedTestError, "Key", "value")
+		err := errkit.WithStack(errPredefinedTestError, "Key", "value")
 		checkErrorResult(t, err,
 			getStackCheck(fnName, lineNumber+1),
 			getDetailsCheck(errkit.ErrorDetails{"Key": "value"}),
@@ -417,14 +417,14 @@ func TestMultipleErrors(t *testing.T) {
 	})
 
 	t.Run("It should be possible to use errors.Is and errors.As with error list", func(t *testing.T) {
-		err := errkit.Append(predefinedStdError, predefinedTestError)
+		err := errkit.Append(errPredefinedStdError, errPredefinedTestError)
 
-		if !errors.Is(err, predefinedTestError) {
+		if !errors.Is(err, errPredefinedTestError) {
 			t.Errorf("Predefined error of test error type is not found in an errors list")
 			return
 		}
 
-		if !errors.Is(err, predefinedStdError) {
+		if !errors.Is(err, errPredefinedStdError) {
 			t.Errorf("Predefined error of std error type is not found in an errors list")
 			return
 		}
@@ -437,7 +437,7 @@ func TestMultipleErrors(t *testing.T) {
 	})
 
 	t.Run("It should NOT be possible to unwrap an error from errors list", func(t *testing.T) {
-		err := errkit.Append(predefinedStdError, predefinedTestError)
+		err := errkit.Append(errPredefinedStdError, errPredefinedTestError)
 		if errors.Unwrap(err) != nil {
 			t.Errorf("Unexpected unwrapping result")
 			return
@@ -446,11 +446,11 @@ func TestMultipleErrors(t *testing.T) {
 
 	t.Run("It should be possible to append multiple errkit.errkitError to errors list", func(t *testing.T) {
 		someErr := errkit.New("Some test error")
-		err := errkit.Append(predefinedSentinelError, someErr)
+		err := errkit.Append(errPredefinedSentinelError, someErr)
 		str := err.Error()
 
 		someErrStr := someErr.Error()
-		predefinedErrStr := predefinedSentinelError.Error()
+		predefinedErrStr := errPredefinedSentinelError.Error()
 
 		arr := append(make([]string, 0), predefinedErrStr, someErrStr)
 		arrStr, _ := json.Marshal(arr)
