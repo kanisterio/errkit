@@ -28,6 +28,8 @@ func Foo() error {
 
 ### Adding stack trace
 If you are interested in adding information about the line and filename where the sentinel error happened, you can do the following:
+
+**NOTE**: While the `WithStack` will return `nil` if passed `err` equals `nil`, we do not consider this good practice and recommend checking the `err` value before invocation.
 ```go
 func Foo() error {
     ...
@@ -47,6 +49,8 @@ func Bar() error {
 
 ### Adding error cause information
 Sometimes you might be interested in returning a sentinel error, but also add some cause error to it, in such cases you can do the following:
+
+**NOTE**: While the `WithCause` will return `nil` if passed `err` equals `nil`, we do not consider this good practice and recommend checking the `err` value before invocation.
 ```go
 func FetchSomething(ID string) error {
     err := doSomething() // Here we have an error 
@@ -74,6 +78,8 @@ func FooBar() error {
 
 ### Wrapping an error with a high-level message
 Sometimes you might want to add some high-level information to an error before passing it up to the invoker.
+
+**NOTE**: While the `Wrap` will return `nil` if passed `err` equals `nil`, we do not consider this good practice and recommend checking the `err` value before invocation. 
 ```go
 func LoadProfile() error {
     err := makeAnApiCall()

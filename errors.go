@@ -44,6 +44,10 @@ func New(message string, details ...any) error {
 
 // Wrap returns a new errkitError that has the given message and err as the cause.
 func Wrap(err error, message string, details ...any) error {
+	if err == nil {
+		return nil
+	}
+
 	e := newError(errors.New(message), 2, details...)
 	e.cause = err
 	return e

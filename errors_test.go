@@ -286,6 +286,16 @@ func TestErrorsWrapping(t *testing.T) {
 		if wrappedErr != nil {
 			t.Errorf("nil expected to be returned")
 		}
+
+		wrappedErr = errkit.Wrap(nil, "Some message")
+		if wrappedErr != nil {
+			t.Errorf("nil expected to be returned")
+		}
+
+		wrappedErr = errkit.WithStack(nil)
+		if wrappedErr != nil {
+			t.Errorf("nil expected to be returned")
+		}
 	})
 }
 
