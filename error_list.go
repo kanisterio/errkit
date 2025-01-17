@@ -83,6 +83,9 @@ func (e ErrorList) MarshalJSON() ([]byte, error) {
 // Append creates a new combined error from err1, err2. If either error is nil,
 // then the other error is returned.
 func Append(err1, err2 error) error {
+	if err1 == nil && err2 == nil {
+		return nil
+	}
 	if err1 == nil {
 		return ErrorList{err2}
 	}
