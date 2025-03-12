@@ -192,9 +192,9 @@ func TestErrorsWrapping(t *testing.T) {
 		checkErrorResult(t, wrappedStdError,
 			getMessageCheck("Wrapped STD error"),                                        // Checking what msg is serialized on top level
 			getTextCheck("Wrapped STD error: TEST_ERR: Sample of predefined std error"), // Checking what error message is generated
-			filenameCheck,                           // Checking callstack capture
-			getErrkitIsCheck(errPredefinedStdError), // Checking that original error was successfully wrapped
-			getUnwrapCheck(errPredefinedStdError),   // Checking that it's possible to unwrap wrapped error
+			filenameCheck,                                                               // Checking callstack capture
+			getErrkitIsCheck(errPredefinedStdError),                                     // Checking that original error was successfully wrapped
+			getUnwrapCheck(errPredefinedStdError),                                       // Checking that it's possible to unwrap wrapped error
 		)
 	})
 
@@ -203,7 +203,7 @@ func TestErrorsWrapping(t *testing.T) {
 		checkErrorResult(t, wrappedErrkitError,
 			getMessageCheck("Wrapped errkit error"), // Checking what msg is serialized on top level
 			getTextCheck("Wrapped errkit error: TEST_ERR: Sample of sentinel error"),
-			filenameCheck, // Checking callstack capture
+			filenameCheck,                                // Checking callstack capture
 			getErrkitIsCheck(errPredefinedSentinelError), // Checking that original error was successfully wrapped
 		)
 	})
@@ -502,7 +502,14 @@ func TestMultipleErrors(t *testing.T) {
 			t.Errorf("Unexpected result.\nexpected: %s\ngot: %s", expectedStr, str)
 			return
 		}
+
+		err = errkit.Append(nil, nil)
+		if err != nil {
+			t.Errorf("Unexpected result.\nexpected: %v\ngot: %s", nil, err.Error())
+			return
+		}
 	})
+
 }
 
 func TestStackViaGoroutine(t *testing.T) {
