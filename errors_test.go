@@ -509,7 +509,6 @@ func TestMultipleErrors(t *testing.T) {
 			return
 		}
 	})
-
 }
 
 func TestStackViaGoroutine(t *testing.T) {
