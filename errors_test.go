@@ -415,10 +415,10 @@ func TestErrorsWithStack(t *testing.T) {
 func TestMultipleErrors(t *testing.T) {
 	t.Run("It should be possible to append errors of different types", func(t *testing.T) {
 		err1 := errors.New("First error is an stderror")
-		err2 := newTestError("Second error is a test erorr")
+		err2 := newTestError("Second error is a test error")
 		err := errkit.Append(err1, err2)
 		str := err.Error()
-		expectedStr := "[\"First error is an stderror\",\"Second error is a test erorr\"]"
+		expectedStr := "[\"First error is an stderror\",\"Second error is a test error\"]"
 
 		if str != expectedStr {
 			t.Errorf("Unexpected result.\nexpected: %s\ngot: %s", expectedStr, str)
@@ -502,11 +502,17 @@ func TestMultipleErrors(t *testing.T) {
 			t.Errorf("Unexpected result.\nexpected: %s\ngot: %s", expectedStr, str)
 			return
 		}
+
+		err = errkit.Append(nil, nil)
+		if err != nil {
+			t.Errorf("Unexpected result.\nexpected: %v\ngot: %s", nil, err.Error())
+			return
+		}
 	})
 }
 
 func TestStackViaGoroutine(t *testing.T) {
-	t.Run("It should be possible to keep erorr stack when passing an error via goroutine", func(t *testing.T) {
+	t.Run("It should be possible to keep error stack when passing an error via goroutine", func(t *testing.T) {
 		var wg sync.WaitGroup
 		errCh := make(chan error)
 
